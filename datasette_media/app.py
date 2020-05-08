@@ -1,7 +1,6 @@
 from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Router, Route
 from starlette.endpoints import HTTPEndpoint
-from starlette.exceptions import HTTPException
 
 
 def serve_media_app(datasette):
