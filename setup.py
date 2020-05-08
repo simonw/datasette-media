@@ -24,6 +24,6 @@ setup(
     packages=["datasette_media"],
     entry_points={"datasette": ["media = datasette_media"]},
     install_requires=["datasette>=0.42", "starlette"],
-    extras_require={"test": ["pytest", "pytest-asyncio", "httpx"]},
+    extras_require={"test": ["pytest", "pytest-asyncio", "httpx", "sqlite-utils"]},
     tests_require=["datasette-media[test]"],
 )
