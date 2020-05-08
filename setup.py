@@ -23,7 +23,7 @@ setup(
     version=VERSION,
     packages=["datasette_media"],
     entry_points={"datasette": ["media = datasette_media"]},
-    install_requires=["datasette", "starlette",],
+    install_requires=["datasette>=0.42", "starlette"],
     extras_require={"test": ["pytest", "pytest-asyncio", "httpx"]},
     tests_require=["datasette-media[test]"],
 )

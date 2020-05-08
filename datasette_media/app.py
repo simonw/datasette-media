@@ -29,9 +29,8 @@ def get_class(datasette):
             if database is None:
                 database = next(iter(datasette.databases.keys()))
             results = await datasette.execute(database, sql, {"key": key})
-            try:
-                row = results.rows[0]
-            except IndexError:
+            row = results.first()
+            if row is None:
                 return HTMLResponse("<h1>404</h1>", status_code=404)
             filepath = row["filepath"]
             return FileResponse(filepath)
