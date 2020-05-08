@@ -51,4 +51,19 @@ The value from the URL -  in this case `CF972D33-5324-44F2-8DAE-22CB3182CD31` - 
 
 The query returns a `filepath` value that has been read from the table. The plugin will then read that file from disk and serve it in response to the request.
 
+SQL queries default to running against the first connected database. You can specify a different database to execute the query against using `"database": "name_of_db"`. To execute against `photos.db`, use this:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select filepath from apple_photos where uuid=:key",
+                "database": "photos"
+            }
+        }
+    }
+}
+```
+
 See [photos-to-sqlite](https://github.com/dogsheep/photos-to-sqlite) for an example of an application that can benefit from this plugin.
