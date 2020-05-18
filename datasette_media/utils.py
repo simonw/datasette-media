@@ -2,7 +2,11 @@ from starlette.responses import Response
 import imghdr
 import io
 from PIL import Image, ExifTags
-import pyheif
+
+try:
+    import pyheif
+except ImportError:
+    pyheif = None
 
 heic_magics = {b"ftypheic", b"ftypheix", b"ftyphevc", b"ftyphevx"}
 ORIENTATION_EXIF_TAG = dict((v, k) for k, v in ExifTags.TAGS.items())["Orientation"]
@@ -37,7 +41,7 @@ def should_reformat(row, plugin_config, request):
 
 def reformat_image(image_bytes, width=None, height=None, format=None):
     image_type = image_type_for_bytes(image_bytes)
-    if image_type == "heic":
+    if image_type == "heic" and pyheif is not None:
         heic = pyheif.read_heif(image_bytes)
         image = Image.frombytes(mode=heic.mode, size=heic.size, data=heic.data)
     else:

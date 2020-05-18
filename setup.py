@@ -28,7 +28,10 @@ setup(
     version=VERSION,
     packages=["datasette_media"],
     entry_points={"datasette": ["media = datasette_media"]},
-    install_requires=["datasette>=0.42", "starlette", "pyheif>=0.4", "Pillow>=7.1.2"],
-    extras_require={"test": ["pytest", "pytest-asyncio", "httpx", "sqlite-utils"]},
+    install_requires=["datasette>=0.42", "starlette", "Pillow>=7.1.2"],
+    extras_require={
+        "test": ["pytest", "pytest-asyncio", "httpx", "sqlite-utils"],
+        "heif": ["pyheif>=0.4"],
+    },
     tests_require=["datasette-media[test]"],
 )
