@@ -52,7 +52,12 @@ def get_class(datasette):
                     resize_executor,
                     lambda: utils.reformat_image(image_bytes, **should_reformat),
                 )
-                return utils.ImageResponse(image)
+                return utils.ImageResponse(
+                    image,
+                    format=row["output_format"]
+                    if "output_format" in row_keys
+                    else None,
+                )
             else:
                 # Non-image files are returned directly
                 return FileResponse(filepath)

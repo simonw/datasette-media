@@ -90,3 +90,30 @@ async def test_sql_resize(extra_sql, expected_width, expected_height):
     image = Image.open(io.BytesIO(response.content))
     actual_width, actual_height = image.size
     assert (expected_width, expected_height) == (actual_width, actual_height)
+    assert "JPEG" == image.format
+
+
+@pytest.mark.asyncio
+async def test_sql_convert():
+    jpeg = str(pathlib.Path(__file__).parent / "example.jpg")
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select '{}' as filepath, 'png' as output_format".format(
+                            jpeg
+                        )
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1")
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    assert (313, 234) == image.size
+    assert "PNG" == image.format
