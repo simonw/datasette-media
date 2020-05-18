@@ -33,7 +33,14 @@ jobs:
       - run:
           name: install python dependencies
           command: |
-            sudo apt-get install -y libheif-dev
+            git clone https://github.com/strukturag/libheif.git libheif \
+              && cd libheif \
+              && ./autogen.sh \
+              && ./configure \
+              && make -j4 \
+              && sudo make install \
+              && sudo ldconfig
+            cd ..
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -61,7 +68,16 @@ jobs:
       - run:
           name: install python dependencies
           command: |
-            sudo apt-get install -y libheif-dev
+            pwd
+            git clone https://github.com/strukturag/libheif.git libheif \
+              && cd libheif \
+              && ./autogen.sh \
+              && ./configure \
+              && make -j4 \
+              && sudo make install \
+              && sudo ldconfig
+            cd ..
+            pwd
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -85,7 +101,14 @@ jobs:
       - run:
           name: install python dependencies
           command: |
-            sudo apt-get install -y libheif-dev
+            git clone https://github.com/strukturag/libheif.git libheif \
+              && cd libheif \
+              && ./autogen.sh \
+              && ./configure \
+              && make -j4 \
+              && sudo make install \
+              && sudo ldconfig
+            cd ..
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
