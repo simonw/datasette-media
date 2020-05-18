@@ -38,8 +38,8 @@ jobs:
               && ./autogen.sh \
               && ./configure \
               && make -j4 \
-              && make install \
-              && ldconfig
+              && sudo make install \
+              && sudo ldconfig
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -72,8 +72,8 @@ jobs:
               && ./autogen.sh \
               && ./configure \
               && make -j4 \
-              && make install \
-              && ldconfig
+              && sudo make install \
+              && sudo ldconfig
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -102,8 +102,8 @@ jobs:
               && ./autogen.sh \
               && ./configure \
               && make -j4 \
-              && make install \
-              && ldconfig
+              && sudo make install \
+              && sudo ldconfig
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
