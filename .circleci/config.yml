@@ -40,6 +40,7 @@ jobs:
               && make -j4 \
               && sudo make install \
               && sudo ldconfig
+            cd ..
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -67,6 +68,7 @@ jobs:
       - run:
           name: install python dependencies
           command: |
+            pwd
             git clone https://github.com/strukturag/libheif.git libheif \
               && cd libheif \
               && ./autogen.sh \
@@ -74,6 +76,8 @@ jobs:
               && make -j4 \
               && sudo make install \
               && sudo ldconfig
+            cd ..
+            pwd
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
@@ -104,6 +108,7 @@ jobs:
               && make -j4 \
               && sudo make install \
               && sudo ldconfig
+            cd ..
             python3 -m venv venv
             . venv/bin/activate
             pip install -e .[test]
