@@ -15,6 +15,12 @@ Install this plugin in the same environment as Datasette.
 
     $ pip install datasette-media
 
+### HEIC image support
+
+Modern iPhones save their photos using the [HEIC image format](https://en.wikipedia.org/wiki/High_Efficiency_Image_File_Format). Processing these images requires an additional dependency, [pyheif](https://pypi.org/project/pyheif/). You can include this dependency by running:
+
+    $ pip install datasette-media[heif]
+
 ## Usage
 
 You can use this plugin to configure Datasette to serve static media based on SQL queries to an underlying database table.
@@ -67,3 +73,28 @@ SQL queries default to running against the first connected database. You can spe
 ```
 
 See [photos-to-sqlite](https://github.com/dogsheep/photos-to-sqlite) for an example of an application that can benefit from this plugin.
+
+### Resizing or reformatting images
+
+Your SQL query can specify that an image should be resized and/or converted to another format by returning additional columns. All three are optional.
+
+* `resize_width` - the width to resize the image to
+* `resize_width` - the height to resize the image to
+* `output_format` - the output format to use (e.g. `jpeg` or `png`) - any output format [supported by Pillow](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html) is allowed here
+
+If you specify one but not the other of `resize_width` or `resize_height` the unspecified one will be calculated automatically to maintain the aspect ratio of the image.
+
+Here's an example configuration that will resize all images to be JPEGs that are 200 pixels in height:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select filepath, 200 as resize_height, 'jpeg' as output_format from apple_photos where uuid=:key",
+                "database": "photos"
+            }
+        }
+    }
+}
+```
