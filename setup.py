@@ -22,7 +22,7 @@ setup(
     project_urls={
         "Issues": "https://gitlab.com/simonw/datasette-media/issues",
         "CI": "https://app.circleci.com/pipelines/github/simonw/datasette-media",
-        "Changelog": "https://github.com/simonw/datasette-media/releases"
+        "Changelog": "https://github.com/simonw/datasette-media/releases",
     },
     license="Apache License, Version 2.0",
     version=VERSION,

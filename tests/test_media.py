@@ -1,5 +1,8 @@
 from datasette.app import Datasette
 from sqlite_utils import Database
+from PIL import Image
+import io
+import pathlib
 import pytest
 import httpx
 
@@ -55,3 +58,35 @@ async def test_database_option(tmpdir):
         response = await client.get("http://localhost/-/media/photos/1")
     assert 200 == response.status_code
     assert "hello2" == response.content.decode("utf8")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "extra_sql,expected_width,expected_height",
+    (
+        ("", 313, 234),
+        (", 99 as resize_width", 99, 74),
+        (", 99 as resize_height", 132, 99),
+    ),
+)
+async def test_sql_resize(extra_sql, expected_width, expected_height):
+    jpeg = str(pathlib.Path(__file__).parent / "example.jpg")
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select '{}' as filepath{}".format(jpeg, extra_sql)
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1")
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    actual_width, actual_height = image.size
+    assert (expected_width, expected_height) == (actual_width, actual_height)
