@@ -1,6 +1,9 @@
 from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Router, Route
 from starlette.endpoints import HTTPEndpoint
+from concurrent import futures
+import asyncio
+from . import utils
 
 
 def serve_media_app(datasette):
@@ -12,6 +15,8 @@ def serve_media_app(datasette):
 
 def get_class(datasette):
     plugin_config = datasette.plugin_config("datasette-media") or {}
+    pool_size = plugin_config.get("num_threads") or 4
+    resize_executor = futures.ThreadPoolExecutor(max_workers=pool_size)
 
     class ServeMedia(HTTPEndpoint):
         async def get(self, request):
@@ -31,8 +36,25 @@ def get_class(datasette):
             results = await datasette.execute(database, sql, {"key": key})
             row = results.first()
             if row is None:
-                return HTMLResponse("<h1>404</h1>", status_code=404)
+                return HTMLResponse("<h1>404 - no results</h1>", status_code=404)
+            row_keys = row.keys()
+            if "filepath" not in row_keys:
+                return HTMLResponse(
+                    "<h1>404 - SQL must return 'filepath'</h1>", status_code=404
+                )
             filepath = row["filepath"]
-            return FileResponse(filepath)
+
+            # Images are special cases, triggered by a few different conditions
+            should_reformat = utils.should_reformat(row, plugin_config, request)
+            if should_reformat:
+                image_bytes = open(filepath, "rb").read()
+                image = await asyncio.get_event_loop().run_in_executor(
+                    resize_executor,
+                    lambda: utils.reformat_image(image_bytes, **should_reformat),
+                )
+                return utils.ImageResponse(image)
+            else:
+                # Non-image files are returned directly
+                return FileResponse(filepath)
 
     return ServeMedia
