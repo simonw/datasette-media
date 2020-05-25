@@ -33,7 +33,7 @@ Media will be served from URLs that start with `/-/media/`. The full URL to each
 
 ### Serving static files from disk
 
-The following ``metadata.json`` configuration will cause this plugin to serve files from disk, based on queries to a database table called `apple_photos`. This example is taken from [dogsheep-photos](https://github.com/dogsheep/dogsheep-photos).
+The following ``metadata.json`` configuration will cause this plugin to serve files from disk, based on queries to a database table called `apple_photos`.
 
 ```json
 {
@@ -72,7 +72,7 @@ SQL queries default to running against the first connected database. You can spe
 }
 ```
 
-See [photos-to-sqlite](https://github.com/dogsheep/photos-to-sqlite) for an example of an application that can benefit from this plugin.
+See [dogsheep-photos](https://github.com/dogsheep/dogsheep-photos) for an example of an application that can benefit from this plugin.
 
 ### Resizing or reformatting images
 
