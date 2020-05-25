@@ -7,7 +7,7 @@
 
 Datasette plugin for serving media based on a SQL query.
 
-Use this when you have a database table containing references to files that you would like to be able to serve to your users.
+Use this when you have a database table containing references to files on disk that you would like to be able to serve to your users.
 
 ## Installation
 
@@ -33,7 +33,7 @@ Media will be served from URLs that start with `/-/media/`. The full URL to each
 
 ### Serving static files from disk
 
-The following ``metadata.json`` configuration will cause this plugin to serve files from disk, based on queries to a database table called `apple_photos`:
+The following ``metadata.json`` configuration will cause this plugin to serve files from disk, based on queries to a database table called `apple_photos`. This example is taken from [dogsheep-photos](https://github.com/dogsheep/dogsheep-photos).
 
 ```json
 {
