@@ -1,4 +1,4 @@
-from starlette.responses import Response
+from datasette.utils.asgi import Response
 import imghdr
 import io
 from PIL import Image, ExifTags
@@ -80,6 +80,6 @@ class ImageResponse(Response):
             format = "PNG" if image.mode == "RGBA" else "JPEG"
         image.save(output_image, format)
         super().__init__(
-            content=output_image.getvalue(),
-            media_type="image/{}".format(format or "JPEG").lower(),
+            body=output_image.getvalue(),
+            content_type="image/{}".format(format or "JPEG").lower(),
         )

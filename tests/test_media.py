@@ -26,7 +26,7 @@ async def test_media_filepath(tmpdir):
         response = await client.get("http://localhost/-/media/photos/key")
     assert 200 == response.status_code
     assert "hello" == response.content.decode("utf8")
-    assert "text/plain; charset=utf-8" == response.headers["content-type"]
+    assert "text/plain" == response.headers["content-type"]
 
 
 @pytest.mark.asyncio
