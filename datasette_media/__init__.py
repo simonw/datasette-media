@@ -3,6 +3,8 @@ from datasette import hookimpl
 from datasette.utils.asgi import Response, AsgiFileDownload
 from concurrent import futures
 from mimetypes import guess_type
+from PIL import Image
+import io
 from . import utils
 
 resize_executor = None
@@ -38,11 +40,16 @@ async def serve_media(datasette, request):
     if row is None:
         return Response.html("<h1>404 - no results</h1>", status=404)
     row_keys = row.keys()
-    if "filepath" not in row_keys:
+    if "filepath" not in row_keys and "binary_content" not in row_keys:
         return Response.html(
-            "<h1>404 - SQL must return 'filepath'</h1>", status=404
+            "<h1>404 - SQL must return 'filepath' or 'binary_content'</h1>", status=404
         )
-    filepath = row["filepath"]
+    if "binary_content" in row_keys:
+        binary_content = row["binary_content"]
+        image = Image.open(io.BytesIO(binary_content))
+        return utils.ImageResponse(image)
+    else:
+        filepath = row["filepath"]
 
     # Images are special cases, triggered by a few different conditions
     should_reformat = utils.should_reformat(row, plugin_config, request)
