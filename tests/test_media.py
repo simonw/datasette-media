@@ -154,7 +154,7 @@ async def test_sql_convert_blob(tmpdir):
             "plugins": {
                 "datasette-media": {
                     "photos": {
-                        "sql": "select content, 'png' as output_format, 101 as resize_width from photos"
+                        "sql": "select content, 'png' as output_format, 100 as resize_width from photos"
                     }
                 }
             }
@@ -164,5 +164,45 @@ async def test_sql_convert_blob(tmpdir):
         response = await client.get("http://localhost/-/media/photos/1")
     assert 200 == response.status_code
     image = Image.open(io.BytesIO(response.content))
-    assert image.size == (100, 75)
+    assert image.size == (100, 74)
     assert "PNG" == image.format
+
+
+@pytest.mark.parametrize(
+    "custom_limit,enabled,args,expected_dimensions,expected_format",
+    (
+        (None, False, {"w": 100}, (313, 234), "JPEG"),
+        (None, True, {"w": 100}, (100, 74), "JPEG"),
+        (None, True, {"format": "png"}, (313, 234), "PNG"),
+        (None, True, {"h": 100}, (133, 100), "JPEG"),
+        (None, True, {"h": 3999}, (5349, 3999), "JPEG"),
+        (None, True, {"h": 4000}, (313, 234), "JPEG"),
+        (4001, True, {"h": 4000}, (5350, 4000), "JPEG"),
+    ),
+)
+@pytest.mark.asyncio
+async def test_transform_query_string(
+    custom_limit, enabled, args, expected_dimensions, expected_format
+):
+    jpeg = str(pathlib.Path(__file__).parent / "example.jpg")
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select '{}' as filepath".format(jpeg),
+                        "enable_transform": enabled,
+                        "max_width_height": custom_limit,
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1", params=args)
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    assert expected_dimensions == image.size
+    assert expected_format == image.format

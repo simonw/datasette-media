@@ -11,6 +11,9 @@ except ImportError:
 heic_magics = {b"ftypheic", b"ftypheix", b"ftyphevc", b"ftyphevx"}
 ORIENTATION_EXIF_TAG = dict((v, k) for k, v in ExifTags.TAGS.items())["Orientation"]
 
+# Sanity check maximum width/height for resized images
+DEFAULT_MAX_WIDTH_HEIGHT = 4000
+
 
 def image_type_for_bytes(b):
     image_type = imghdr.what(None, b)
@@ -24,19 +27,33 @@ def image_type_for_bytes(b):
     return None
 
 
-def should_transform(row, plugin_config, request):
+def should_transform(row, config, request):
     # Decides if the provided row should be transformed, based on request AND config
     # Returns None if it should not be, or a dict of resize/etc options if it should
     row_keys = row.keys()
+    transform = {}
     if any(
         key in row_keys for key in ("resize_width", "resize_height", "output_format")
     ):
-        return dict(
+        transform = dict(
             width=row["resize_width"] if "resize_width" in row_keys else None,
             height=row["resize_height"] if "resize_height" in row_keys else None,
             format=row["output_format"] if "output_format" in row_keys else None,
         )
-    return None
+    if config.get("enable_transform"):
+        max_width_height = config.get("max_width_height") or DEFAULT_MAX_WIDTH_HEIGHT
+        # URL arguments over-ride columns
+        if "format" in request.args:
+            transform["format"] = request.args["format"]
+        # If either width or height is set, ignore the ones from the DB row
+        if "w" in request.args or "h" in request.args:
+            transform.pop("width", None)
+            transform.pop("height", None)
+        for urlarg, key in {"w": "width", "h": "height"}.items():
+            if urlarg in request.args and int(request.args[urlarg]) < max_width_height:
+                transform[key] = int(request.args[urlarg])
+
+    return transform or None
 
 
 def transform_image(image_bytes, width=None, height=None, format=None):
@@ -67,7 +84,7 @@ def transform_image(image_bytes, width=None, height=None, format=None):
         elif width is None:
             # Set w based on h
             width = int((float(image_width) / image_height) * height)
-        image.thumbnail((width, height))
+        image = image.resize((width, height))
 
     return image
 

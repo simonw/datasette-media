@@ -133,13 +133,52 @@ Here's an example configuration that will resize all images to be JPEGs that are
 }
 ```
 
+If you enable the `enable_transform` configuration option you can instead specify transform parameters at runtime using querystring parameters. For example:
+
+- `/-/media/photo/CF972D33?w=200` to resize to a fixed width
+- `/-/media/photo/CF972D33?h=200` to resize to a fixed height
+- `/-/media/photo/CF972D33?format=jpeg` to convert to JPEG
+
+That option is added like so:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select filepath from apple_photos where uuid=:key",
+                "database": "photos",
+                "enable_transform": true
+            }
+        }
+    }
+}
+```
+
+The maximum allowed height or width is 4000 pixels. You can change this limit using the `"max_width_height"` option:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select filepath from apple_photos where uuid=:key",
+                "database": "photos",
+                "enable_transform": true,
+                "max_width_height": 1000
+            }
+        }
+    }
+}
+```
+
 ## Configuration
 
-In addition to the different named content types, the following special plugin configuration settings are available:
+In addition to the different named content types, the following special plugin configuration setting is available:
 
 - `transform_threads` - number of threads to use for running transformations (e.g. resizing). Defaults to 4.
 
-These can be used like this:
+This can be used like this:
 
 ```json
 {
