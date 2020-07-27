@@ -116,7 +116,7 @@ async def test_sql_resize(extra_sql, expected_width, expected_height):
 
 
 @pytest.mark.asyncio
-async def test_sql_convert():
+async def test_sql_convert_filepath():
     jpeg = str(pathlib.Path(__file__).parent / "example.jpg")
     app = Datasette(
         [],
@@ -138,4 +138,31 @@ async def test_sql_convert():
     assert 200 == response.status_code
     image = Image.open(io.BytesIO(response.content))
     assert (313, 234) == image.size
+    assert "PNG" == image.format
+
+
+@pytest.mark.asyncio
+async def test_sql_convert_blob(tmpdir):
+    jpeg = pathlib.Path(__file__).parent / "example.jpg"
+    db_path = tmpdir / "photos.db"
+    Database(str(db_path))["photos"].insert(
+        {"content": jpeg.open("rb").read(),}
+    )
+    app = Datasette(
+        [db_path],
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select content, 'png' as output_format, 101 as resize_width from photos"
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1")
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    assert image.size == (100, 75)
     assert "PNG" == image.format
