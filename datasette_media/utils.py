@@ -77,7 +77,12 @@ class ImageResponse(Response):
         self.image = image
         output_image = io.BytesIO()
         if format is None:
-            format = "PNG" if image.mode == "RGBA" else "JPEG"
+            if image.format == "GIF":
+                format = "GIF"
+            elif image.mode == "RGBA":
+                format = "PNG"
+            else:
+                format = "JPEG"
         image.save(output_image, format)
         super().__init__(
             body=output_image.getvalue(),

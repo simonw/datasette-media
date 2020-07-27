@@ -98,3 +98,27 @@ Here's an example configuration that will resize all images to be JPEGs that are
     }
 }
 ```
+
+## Configuration
+
+In addition to the different named conten types, the following special plugin configuration keys are available:
+
+- `transform_threads` - number of threads to use for running transformations (e.g. resizing). Defaults to 4.
+- `enable_transform` - enable custom transformations controlled by additional query string parameters, e.g. `?w=400`
+
+These can be used like this:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select filepath from apple_photos where uuid=:key",
+                "database": "photos"
+            },
+            "transform_threads": 8,
+            "enable_transform": true
+        }
+    }
+}
+```
