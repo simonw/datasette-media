@@ -30,6 +30,28 @@ async def test_media_filepath(tmpdir):
 
 
 @pytest.mark.asyncio
+async def test_media_blob(tmpdir):
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "text": {
+                        "sql": "select 'Hello ' || :key as content, 'text/plain' as content_type"
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/text/key")
+    assert 200 == response.status_code
+    assert "Hello key" == response.content.decode("utf8")
+    assert "text/plain" == response.headers["content-type"]
+
+
+@pytest.mark.asyncio
 async def test_database_option(tmpdir):
     filepath = tmpdir / "hello.txt"
     filepath.write_text("hello2", "utf-8")
@@ -94,7 +116,7 @@ async def test_sql_resize(extra_sql, expected_width, expected_height):
 
 
 @pytest.mark.asyncio
-async def test_sql_convert():
+async def test_sql_convert_filepath():
     jpeg = str(pathlib.Path(__file__).parent / "example.jpg")
     app = Datasette(
         [],
@@ -116,4 +138,31 @@ async def test_sql_convert():
     assert 200 == response.status_code
     image = Image.open(io.BytesIO(response.content))
     assert (313, 234) == image.size
+    assert "PNG" == image.format
+
+
+@pytest.mark.asyncio
+async def test_sql_convert_blob(tmpdir):
+    jpeg = pathlib.Path(__file__).parent / "example.jpg"
+    db_path = tmpdir / "photos.db"
+    Database(str(db_path))["photos"].insert(
+        {"content": jpeg.open("rb").read(),}
+    )
+    app = Datasette(
+        [db_path],
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select content, 'png' as output_format, 101 as resize_width from photos"
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1")
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    assert image.size == (100, 75)
     assert "PNG" == image.format
