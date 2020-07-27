@@ -74,13 +74,13 @@ SQL queries default to running against the first connected database. You can spe
 
 See [dogsheep-photos](https://github.com/dogsheep/dogsheep-photos) for an example of an application that can benefit from this plugin.
 
-### Resizing or reformatting images
+### Resizing or transforming images
 
 Your SQL query can specify that an image should be resized and/or converted to another format by returning additional columns. All three are optional.
 
 * `resize_width` - the width to resize the image to
 * `resize_width` - the height to resize the image to
-* `output_format` - the output format to use (e.g. `jpeg` or `png`) - any output format [supported by Pillow](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html) is allowed here
+* `output_format` - the output format to use (e.g. `jpeg` or `png`) - any output format [supported by Pillow](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html) is allowed here.
 
 If you specify one but not the other of `resize_width` or `resize_height` the unspecified one will be calculated automatically to maintain the aspect ratio of the image.
 
@@ -101,7 +101,7 @@ Here's an example configuration that will resize all images to be JPEGs that are
 
 ## Configuration
 
-In addition to the different named conten types, the following special plugin configuration keys are available:
+In addition to the different named content types, the following special plugin configuration settings are available:
 
 - `transform_threads` - number of threads to use for running transformations (e.g. resizing). Defaults to 4.
 - `enable_transform` - enable custom transformations controlled by additional query string parameters, e.g. `?w=400`

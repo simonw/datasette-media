@@ -50,12 +50,12 @@ async def serve_media(datasette, request):
         filepath = row["filepath"]
 
     # Images are special cases, triggered by a few different conditions
-    should_reformat = utils.should_reformat(row, plugin_config, request)
-    if should_reformat:
+    should_transform = utils.should_transform(row, plugin_config, request)
+    if should_transform:
         image_bytes = open(filepath, "rb").read()
         image = await asyncio.get_event_loop().run_in_executor(
             transform_executor,
-            lambda: utils.reformat_image(image_bytes, **should_reformat),
+            lambda: utils.transform_image(image_bytes, **should_transform),
         )
         return utils.ImageResponse(
             image, format=row["output_format"] if "output_format" in row_keys else None,

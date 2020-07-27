@@ -24,8 +24,8 @@ def image_type_for_bytes(b):
     return None
 
 
-def should_reformat(row, plugin_config, request):
-    # Decides if the provided row should be reformatted, based on request AND config
+def should_transform(row, plugin_config, request):
+    # Decides if the provided row should be transformed, based on request AND config
     # Returns None if it should not be, or a dict of resize/etc options if it should
     row_keys = row.keys()
     if any(
@@ -39,7 +39,7 @@ def should_reformat(row, plugin_config, request):
     return None
 
 
-def reformat_image(image_bytes, width=None, height=None, format=None):
+def transform_image(image_bytes, width=None, height=None, format=None):
     image_type = image_type_for_bytes(image_bytes)
     if image_type == "heic" and pyheif is not None:
         heic = pyheif.read_heif(image_bytes)
