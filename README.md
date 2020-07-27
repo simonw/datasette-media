@@ -7,7 +7,7 @@
 
 Datasette plugin for serving media based on a SQL query.
 
-Use this when you have a database table containing references to files on disk that you would like to be able to serve to your users.
+Use this when you have a database table containing references to files on disk - or binary content stored in BLOB columns - that you would like to be able to serve to your users.
 
 ## Installation
 
@@ -73,6 +73,40 @@ SQL queries default to running against the first connected database. You can spe
 ```
 
 See [dogsheep-photos](https://github.com/dogsheep/dogsheep-photos) for an example of an application that can benefit from this plugin.
+
+### Serving binary content from BLOB columns
+
+If your SQL query returns a `content` column, this will be served directly to the user:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select thumbnail as content from photos where uuid=:key",
+                "database": "thumbs"
+            }
+        }
+    }
+}
+```
+
+You can also return a `content_type` column which will be used as the `Content-Type` header served to the user:
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photo": {
+                "sql": "select body as content, 'text/html;charset=utf-8' as content_type from documents where id=:key",
+                "database": "documents"
+            }
+        }
+    }
+}
+```
+
+If you do not specify a `content_type` the default of `application/octet-stream` will be used.
 
 ### Resizing or transforming images
 

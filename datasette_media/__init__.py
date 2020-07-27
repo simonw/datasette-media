@@ -10,6 +10,7 @@ from . import utils
 transform_executor = None
 RESERVED_MEDIA_TYPES = ("transform_threads", "enable_transform")
 
+
 @hookimpl
 def register_routes():
     return [
@@ -38,6 +39,7 @@ async def serve_media(datasette, request):
     row = results.first()
     if row is None:
         return Response.html("<h1>404 - no results</h1>", status=404)
+    content_type = None
     row_keys = row.keys()
     if "filepath" not in row_keys and "content" not in row_keys:
         return Response.html(
@@ -48,6 +50,9 @@ async def serve_media(datasette, request):
         return utils.ImageResponse(image)
     else:
         filepath = row["filepath"]
+
+    if "content_type" in row_keys:
+        content_type = row["content_type"]
 
     # Images are special cases, triggered by a few different conditions
     should_transform = utils.should_transform(row, plugin_config, request)
@@ -62,4 +67,6 @@ async def serve_media(datasette, request):
         )
     else:
         # Non-image files are returned directly
-        return AsgiFileDownload(filepath, content_type=guess_type(filepath)[0])
+        return AsgiFileDownload(
+            filepath, content_type=content_type or guess_type(filepath)[0]
+        )
