@@ -39,25 +39,25 @@ async def serve_media(datasette, request):
     row = results.first()
     if row is None:
         return Response.html("<h1>404 - no results</h1>", status=404)
-    content_type = None
+
+    # We need filepath or content
+    content = None
+    filepath = None
+
     row_keys = row.keys()
     if "filepath" not in row_keys and "content" not in row_keys:
         return Response.html(
             "<h1>404 - SQL must return 'filepath' or 'content'</h1>", status=404
         )
     if "content" in row_keys:
-        image = Image.open(io.BytesIO(row["content"]))
-        return utils.ImageResponse(image)
+        content = row["content"]
     else:
         filepath = row["filepath"]
-
-    if "content_type" in row_keys:
-        content_type = row["content_type"]
 
     # Images are special cases, triggered by a few different conditions
     should_transform = utils.should_transform(row, plugin_config, request)
     if should_transform:
-        image_bytes = open(filepath, "rb").read()
+        image_bytes = content or open(filepath, "rb").read()
         image = await asyncio.get_event_loop().run_in_executor(
             transform_executor,
             lambda: utils.transform_image(image_bytes, **should_transform),
@@ -67,6 +67,15 @@ async def serve_media(datasette, request):
         )
     else:
         # Non-image files are returned directly
-        return AsgiFileDownload(
-            filepath, content_type=content_type or guess_type(filepath)[0]
-        )
+        content_type = None
+        if "content_type" in row_keys:
+            content_type = row["content_type"]
+
+        if content:
+            return Response(
+                content, content_type=content_type or "application/octet-stream"
+            )
+        else:
+            return AsgiFileDownload(
+                filepath, content_type=content_type or guess_type(filepath)[0]
+            )
