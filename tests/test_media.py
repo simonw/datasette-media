@@ -1,3 +1,4 @@
+from asgiref.testing import ApplicationCommunicator
 from datasette.app import Datasette
 from sqlite_utils import Database
 from PIL import Image
@@ -74,6 +75,65 @@ async def test_media_content_url(httpx_mock):
     image = Image.open(io.BytesIO(response.content))
     assert image.size == (313, 234)
     assert "JPEG" == image.format
+
+
+@pytest.mark.asyncio
+async def test_media_content_url_transform(httpx_mock):
+    jpeg = pathlib.Path(__file__).parent / "example.jpg"
+    httpx_mock.add_response(
+        url="http://example/example.jpg",
+        data=jpeg.open("rb").read(),
+        headers={"Content-Type": "image/jpeg"},
+    )
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select 'http://example/example.jpg' as content_url, 100 as resize_width",
+                        "enable_transform": True,
+                    }
+                }
+            }
+        },
+    ).app()
+    # We canet use httpx.AsyncClient here to execute the test, because
+    # we've mocked it using httpx_mock - so we do it the hard way
+    scope = {
+        "type": "http",
+        "http_version": "1.0",
+        "method": "GET",
+        "path": "/-/media/photos/2",
+        "raw_path": b"/-/media/photos/2",
+        "query_string": b"format=PNG",
+        "headers": [],
+    }
+    instance = ApplicationCommunicator(app, scope)
+    instance.send_input({"type": "http.request"})
+    messages = []
+    start = await instance.receive_output(2)
+    messages.append(start)
+    assert start["type"] == "http.response.start"
+    response_headers = dict(
+        [(k.decode("utf8"), v.decode("utf8")) for k, v in start["headers"]]
+    )
+    status_code = start["status"]
+    # Loop until we run out of response.body
+    body = b""
+    while True:
+        message = await instance.receive_output(2)
+        messages.append(message)
+        assert message["type"] == "http.response.body"
+        body += message["body"]
+        if not message.get("more_body"):
+            break
+
+    assert 200 == status_code
+    image = Image.open(io.BytesIO(body))
+    assert image.size == (100, 74)
+    assert "PNG" == image.format
 
 
 @pytest.mark.asyncio

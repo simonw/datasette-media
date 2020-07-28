@@ -30,7 +30,13 @@ setup(
     entry_points={"datasette": ["media = datasette_media"]},
     install_requires=["datasette>=0.44", "Pillow>=7.1.2", "httpx>=0.13.3"],
     extras_require={
-        "test": ["pytest", "pytest-asyncio", "sqlite-utils", "pytest-httpx>=0.4.0"],
+        "test": [
+            "asgiref",
+            "pytest",
+            "pytest-asyncio",
+            "sqlite-utils",
+            "pytest-httpx>=0.4.0",
+        ],
         "heif": ["pyheif>=0.4"],
     },
     tests_require=["datasette-media[test]"],
