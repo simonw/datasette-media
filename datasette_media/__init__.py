@@ -2,6 +2,7 @@ import asyncio
 from datasette import hookimpl
 from datasette.utils.asgi import Response, AsgiFileDownload
 from concurrent import futures
+import httpx
 from mimetypes import guess_type
 from PIL import Image
 import io
@@ -42,15 +43,25 @@ async def serve_media(datasette, request):
 
     # We need filepath or content
     content = None
+    content_type = None
     filepath = None
 
     row_keys = row.keys()
-    if "filepath" not in row_keys and "content" not in row_keys:
+    if (
+        "filepath" not in row_keys
+        and "content" not in row_keys
+        and "content_url" not in row_keys
+    ):
         return Response.html(
             "<h1>404 - SQL must return 'filepath' or 'content'</h1>", status=404
         )
     if "content" in row_keys:
         content = row["content"]
+    elif "content_url" in row_keys:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(row["content_url"])
+            content = response.content
+            content_type = response.headers["content-type"]
     else:
         filepath = row["filepath"]
 
@@ -65,7 +76,6 @@ async def serve_media(datasette, request):
         return utils.ImageResponse(image, format=should_transform.get("format"))
     else:
         # Non-image files are returned directly
-        content_type = None
         if "content_type" in row_keys:
             content_type = row["content_type"]
 

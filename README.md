@@ -108,6 +108,28 @@ You can also return a `content_type` column which will be used as the `Content-T
 
 If you do not specify a `content_type` the default of `application/octet-stream` will be used.
 
+### Serving content proxied from a URL
+
+To serve content that is itself fetched from elsewhere, return a `content_url` column. This can be particularly useful when combined with the ability to resize images (described in the next section).
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "photos": {
+                "sql": "select photo_url as content_url from photos where id=:key",
+                "database": "photos",
+                "enable_transform": true
+            }
+        }
+    }
+}
+```
+
+Now you can access resized versions of images from that URL like so:
+
+    /-/media/photos/13?w=200
+
 ### Resizing or transforming images
 
 Your SQL query can specify that an image should be resized and/or converted to another format by returning additional columns. All three are optional.

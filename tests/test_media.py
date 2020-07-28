@@ -52,6 +52,31 @@ async def test_media_blob(tmpdir):
 
 
 @pytest.mark.asyncio
+async def test_media_content_url(httpx_mock):
+    jpeg = pathlib.Path(__file__).parent / "example.jpg"
+    httpx_mock.add_response(data=jpeg.open("rb").read())
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "photos": {
+                        "sql": "select 'http://example/example.jpg' as content_url"
+                    }
+                }
+            }
+        },
+    ).app()
+    async with httpx.AsyncClient(app=app) as client:
+        response = await client.get("http://localhost/-/media/photos/1")
+    assert 200 == response.status_code
+    image = Image.open(io.BytesIO(response.content))
+    assert image.size == (313, 234)
+    assert "JPEG" == image.format
+
+
+@pytest.mark.asyncio
 async def test_database_option(tmpdir):
     filepath = tmpdir / "hello.txt"
     filepath.write_text("hello2", "utf-8")
