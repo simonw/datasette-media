@@ -130,6 +130,24 @@ Now you can access resized versions of images from that URL like so:
 
     /-/media/photos/13?w=200
 
+### Setting a download file name
+
+The `content_filename` column can be returned to force browsers to download the content using a specific file name.
+
+```json
+{
+    "plugins": {
+        "datasette-media": {
+            "hello": {
+                "sql": "select 'Hello ' || :key as content, 'hello.txt' as content_filename"
+            }
+        }
+    }
+}
+```
+
+Visiting `/-/media/hello/Groot` will cause your browser to download a file called `hello.txt` containing the text `Hello Groot`.
+
 ### Resizing or transforming images
 
 Your SQL query can specify that an image should be resized and/or converted to another format by returning additional columns. All three are optional.

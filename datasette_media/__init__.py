@@ -1,6 +1,6 @@
 import asyncio
 from datasette import hookimpl
-from datasette.utils.asgi import Response, AsgiFileDownload
+from datasette.utils.asgi import Response, asgi_send_file
 from concurrent import futures
 import httpx
 from mimetypes import guess_type
@@ -45,6 +45,7 @@ async def serve_media(datasette, request, send):
     content = None
     content_type = None
     content_url = None
+    content_filename = None
     filepath = None
 
     row_keys = row.keys()
@@ -64,6 +65,9 @@ async def serve_media(datasette, request, send):
     else:
         filepath = row["filepath"]
 
+    if "content_filename" in row_keys:
+        content_filename = row["content_filename"]
+
     # Images are special cases, triggered by a few different conditions
     should_transform = utils.should_transform(row, config, request)
     if should_transform:
@@ -77,7 +81,12 @@ async def serve_media(datasette, request, send):
             transform_executor,
             lambda: utils.transform_image(image_bytes, **should_transform),
         )
-        return utils.ImageResponse(image, format=should_transform.get("format"))
+        response = utils.ImageResponse(image, format=should_transform.get("format"))
+        if content_filename:
+            response.headers[
+                "content-disposition"
+            ] = 'attachment; filename="{}"'.format(content_filename)
+        return response
     else:
         # content_url is proxied as a special case
         if content_url:
@@ -90,6 +99,16 @@ async def serve_media(datasette, request, send):
                     headers.append(
                         (b"content-length", str(content_length).encode("utf-8"))
                     )
+                if content_filename:
+                    headers.append(
+                        (
+                            b"content-disposition",
+                            'attachment; filename="{}"'.format(content_filename).encode(
+                                "utf-8"
+                            ),
+                        )
+                    )
+
                 await send(
                     {"type": "http.response.start", "status": 200, "headers": headers}
                 )
@@ -103,15 +122,39 @@ async def serve_media(datasette, request, send):
                     )
                 await send({"type": "http.response.body", "body": b""})
                 return
-        # Non-image files are returned directly
+
         if "content_type" in row_keys:
             content_type = row["content_type"]
 
+        # Non-image files are returned directly
         if content:
             return Response(
-                content, content_type=content_type or "application/octet-stream"
+                content,
+                content_type=content_type or "application/octet-stream",
+                headers={
+                    "content-disposition": 'attachment; filename="{}"'.format(
+                        content_filename
+                    )
+                }
+                if content_filename
+                else None,
             )
         else:
-            return AsgiFileDownload(
-                filepath, content_type=content_type or guess_type(filepath)[0]
+            print(
+                """
+            asgi_send_file(
+                send={},
+                filepath={},
+                filename={},
+                content_type={} or guess_type(filepath)[0],
+            )
+            """.format(
+                    send, filepath, content_filename, content_type
+                )
+            )
+            await asgi_send_file(
+                send,
+                filepath,
+                filename=content_filename,
+                content_type=content_type or guess_type(filepath)[0],
             )

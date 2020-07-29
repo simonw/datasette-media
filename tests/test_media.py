@@ -55,7 +55,9 @@ async def test_media_blob(tmpdir):
 @pytest.mark.asyncio
 async def test_media_content_url(httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
-    httpx_mock.add_response(data=jpeg.open("rb").read())
+    httpx_mock.add_response(
+        data=jpeg.open("rb").read(), headers={"Content-Type": "image/jpeg"}
+    )
     app = Datasette(
         [],
         memory=True,
@@ -69,10 +71,9 @@ async def test_media_content_url(httpx_mock):
             }
         },
     ).app()
-    async with httpx.AsyncClient(app=app) as client:
-        response = await client.get("http://localhost/-/media/photos/1")
-    assert 200 == response.status_code
-    image = Image.open(io.BytesIO(response.content))
+    status_code, headers, body = await request(app, "/-/media/photos/1")
+    assert 200 == status_code
+    image = Image.open(io.BytesIO(body))
     assert image.size == (313, 234)
     assert "JPEG" == image.format
 
@@ -81,9 +82,7 @@ async def test_media_content_url(httpx_mock):
 async def test_media_content_url_transform(httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     httpx_mock.add_response(
-        url="http://example/example.jpg",
-        data=jpeg.open("rb").read(),
-        headers={"Content-Type": "image/jpeg"},
+        data=jpeg.open("rb").read(), headers={"Content-Type": "image/jpeg"},
     )
     app = Datasette(
         [],
@@ -99,37 +98,7 @@ async def test_media_content_url_transform(httpx_mock):
             }
         },
     ).app()
-    # We canet use httpx.AsyncClient here to execute the test, because
-    # we've mocked it using httpx_mock - so we do it the hard way
-    scope = {
-        "type": "http",
-        "http_version": "1.0",
-        "method": "GET",
-        "path": "/-/media/photos/2",
-        "raw_path": b"/-/media/photos/2",
-        "query_string": b"format=PNG",
-        "headers": [],
-    }
-    instance = ApplicationCommunicator(app, scope)
-    instance.send_input({"type": "http.request"})
-    messages = []
-    start = await instance.receive_output(2)
-    messages.append(start)
-    assert start["type"] == "http.response.start"
-    response_headers = dict(
-        [(k.decode("utf8"), v.decode("utf8")) for k, v in start["headers"]]
-    )
-    status_code = start["status"]
-    # Loop until we run out of response.body
-    body = b""
-    while True:
-        message = await instance.receive_output(2)
-        messages.append(message)
-        assert message["type"] == "http.response.body"
-        body += message["body"]
-        if not message.get("more_body"):
-            break
-
+    status_code, headers, body = await request(app, "/-/media/photos/2?format=PNG")
     assert 200 == status_code
     image = Image.open(io.BytesIO(body))
     assert image.size == (100, 74)
@@ -291,3 +260,92 @@ async def test_transform_query_string(
     image = Image.open(io.BytesIO(response.content))
     assert expected_dimensions == image.size
     assert expected_format == image.format
+
+
+@pytest.mark.parametrize(
+    "path,expected_size",
+    [
+        ("/-/media/proxied/1", (313, 234)),
+        ("/-/media/proxied_transformed/1", (100, 74)),
+        ("/-/media/blob/1", (313, 234)),
+        ("/-/media/on_disk/1", (313, 234)),
+    ],
+)
+@pytest.mark.asyncio
+async def test_content_filename(path, expected_size, httpx_mock):
+    jpeg = pathlib.Path(__file__).parent / "example.jpg"
+    jpeg_bytes = jpeg.open("rb").read()
+    if "proxied" in path:
+        httpx_mock.add_response(data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+    app = Datasette(
+        [],
+        memory=True,
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "proxied": {
+                        "sql": "select 'http://blah/' as content_url, 'x.jpg' as content_filename"
+                    },
+                    "proxied_transformed": {
+                        "sql": "select 'http://blah/' as content_url, 'x.jpg' as content_filename, 100 as resize_width"
+                    },
+                    "blob": {
+                        "sql": "select X'{}' as content, 'x.jpg' as content_filename".format(
+                            jpeg_bytes.hex()
+                        )
+                    },
+                    "on_disk": {
+                        "sql": "select '{}' as filepath, 'x.jpg' as content_filename".format(
+                            jpeg
+                        )
+                    },
+                }
+            }
+        },
+    ).app()
+    status_code, headers, body = await request(app, path)
+    assert 200 == status_code
+    content_disposition = [
+        headers[k] for k in headers if k.lower() == "content-disposition"
+    ][0]
+    assert content_disposition == 'attachment; filename="x.jpg"'
+    image = Image.open(io.BytesIO(body))
+    assert expected_size == image.size
+    assert "JPEG" == image.format
+
+
+async def request(app, path):
+    # Sometimes we can't use httpx.AsyncClient to execute the test, because
+    # we've mocked it using httpx_mock - so we do it the harder way instead
+    if "?" in path:
+        path, query_string = path.split("?", 1)
+        query_string = query_string.encode("utf-8")
+    else:
+        query_string = b""
+    scope = {
+        "type": "http",
+        "http_version": "1.0",
+        "method": "GET",
+        "path": path,
+        "raw_path": path.encode("utf-8"),
+        "query_string": query_string,
+        "headers": [],
+    }
+    instance = ApplicationCommunicator(app, scope)
+    await instance.send_input({"type": "http.request"})
+    messages = []
+    start = await instance.receive_output(2)
+    messages.append(start)
+    assert start["type"] == "http.response.start"
+    headers = dict([(k.decode("utf8"), v.decode("utf8")) for k, v in start["headers"]])
+    status_code = start["status"]
+    # Loop until we run out of response.body
+    body = b""
+    while True:
+        message = await instance.receive_output(2)
+        messages.append(message)
+        assert message["type"] == "http.response.body"
+        body += message["body"]
+        if not message.get("more_body"):
+            break
+    return status_code, headers, body
