@@ -31,7 +31,10 @@ async def test_media_filepath(tmpdir):
 
 
 @pytest.mark.asyncio
-async def test_media_blob(tmpdir):
+@pytest.mark.parametrize(
+    "content,content_type", [("hello", "text/plain"), ("GIF", "image/gif")]
+)
+async def test_media_blob(tmpdir, content, content_type):
     app = Datasette(
         [],
         memory=True,
@@ -39,7 +42,9 @@ async def test_media_blob(tmpdir):
             "plugins": {
                 "datasette-media": {
                     "text": {
-                        "sql": "select 'Hello ' || :key as content, 'text/plain' as content_type"
+                        "sql": "select '{}' as content, '{}' as content_type".format(
+                            content, content_type
+                        )
                     }
                 }
             }
@@ -48,8 +53,8 @@ async def test_media_blob(tmpdir):
     async with httpx.AsyncClient(app=app) as client:
         response = await client.get("http://localhost/-/media/text/key")
     assert 200 == response.status_code
-    assert "Hello key" == response.content.decode("utf8")
-    assert "text/plain" == response.headers["content-type"]
+    assert content == response.content.decode("utf8")
+    assert content_type == response.headers["content-type"]
 
 
 @pytest.mark.asyncio
