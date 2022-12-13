@@ -1,5 +1,6 @@
-from setuptools import setup
 import os
+
+from setuptools import setup
 
 VERSION = "0.5"
 
@@ -20,11 +21,15 @@ setup(
     author="Simon Willison",
     url="https://github.com/simonw/datasette-media",
     project_urls={
-        "Issues": "https://gitlab.com/simonw/datasette-media/issues",
-        "CI": "https://app.circleci.com/pipelines/github/simonw/datasette-media",
+        "Issues": "https://github.com/simonw/datasette-media/issues",
+        "CI": "https://github.com/simonw/datasette-media/actions",
         "Changelog": "https://github.com/simonw/datasette-media/releases",
     },
     license="Apache License, Version 2.0",
+    classifiers=[
+        "Framework :: Datasette",
+        "License :: OSI Approved :: Apache Software License",
+    ],
     version=VERSION,
     packages=["datasette_media"],
     entry_points={"datasette": ["media = datasette_media"]},
