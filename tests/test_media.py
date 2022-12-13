@@ -61,7 +61,7 @@ async def test_media_blob(tmpdir, content, content_type):
 async def test_media_content_url(httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     httpx_mock.add_response(
-        data=jpeg.open("rb").read(), headers={"Content-Type": "image/jpeg"}
+        content=jpeg.open("rb").read(), headers={"Content-Type": "image/jpeg"}
     )
     app = Datasette(
         [],
@@ -87,7 +87,8 @@ async def test_media_content_url(httpx_mock):
 async def test_media_content_url_transform(httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     httpx_mock.add_response(
-        data=jpeg.open("rb").read(), headers={"Content-Type": "image/jpeg"},
+        content=jpeg.open("rb").read(),
+        headers={"Content-Type": "image/jpeg"},
     )
     app = Datasette(
         [],
@@ -205,7 +206,9 @@ async def test_sql_convert_blob(tmpdir):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     db_path = tmpdir / "photos.db"
     Database(str(db_path))["photos"].insert(
-        {"content": jpeg.open("rb").read(),}
+        {
+            "content": jpeg.open("rb").read(),
+        }
     )
     app = Datasette(
         [db_path],
@@ -281,7 +284,7 @@ async def test_content_filename(path, expected_size, httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     jpeg_bytes = jpeg.open("rb").read()
     if "proxied" in path:
-        httpx_mock.add_response(data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+        httpx_mock.add_response(content=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
     app = Datasette(
         [],
         memory=True,
