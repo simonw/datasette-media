@@ -58,6 +58,22 @@ async def test_media_blob(tmpdir, content, content_type):
 
 
 @pytest.mark.asyncio
+async def test_media_blob_404():
+    ds = Datasette(
+        metadata={
+            "plugins": {
+                "datasette-media": {
+                    "text": {"sql": "select '' as content, 'image/gif' as content_type"}
+                }
+            }
+        }
+    )
+    response = await ds.client.get("/-/media/text/key")
+    assert response.status_code == 404
+    assert response.content.startswith(b"\x89PNG")
+
+
+@pytest.mark.asyncio
 async def test_media_content_url(httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     httpx_mock.add_response(
@@ -284,7 +300,9 @@ async def test_content_filename(path, expected_size, httpx_mock):
     jpeg = pathlib.Path(__file__).parent / "example.jpg"
     jpeg_bytes = jpeg.open("rb").read()
     if "proxied" in path:
-        httpx_mock.add_response(content=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+        httpx_mock.add_response(
+            content=jpeg_bytes, headers={"Content-Type": "image/jpeg"}
+        )
     app = Datasette(
         [],
         memory=True,

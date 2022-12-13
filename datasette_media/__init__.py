@@ -11,6 +11,8 @@ from . import utils
 transform_executor = None
 RESERVED_MEDIA_TYPES = ("transform_threads", "enable_transform")
 
+PNG_1x1 = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x00\x00\x00\x00:~\x9bU\x00\x00\x00\nIDATx\x9cc\xfa\x0f\x00\x01\x05\x01\x02\xcf\xa0.\xcd\x00\x00\x00\x00IEND\xaeB`\x82"
+
 
 @hookimpl
 def register_routes():
@@ -127,7 +129,20 @@ async def serve_media(datasette, request, send):
             content_type = row["content_type"]
 
         # Non-image files are returned directly
-        if content:
+        if filepath:
+            await asgi_send_file(
+                send,
+                filepath,
+                filename=content_filename,
+                content_type=content_type or guess_type(filepath)[0],
+            )
+        else:
+            status_code = 200
+            if not content:
+                status_code = 404
+                content = PNG_1x1
+                content_type = "application/png"
+                content_filename = None
             return Response(
                 content,
                 content_type=content_type or "application/octet-stream",
@@ -138,23 +153,5 @@ async def serve_media(datasette, request, send):
                 }
                 if content_filename
                 else None,
-            )
-        else:
-            print(
-                """
-            asgi_send_file(
-                send={},
-                filepath={},
-                filename={},
-                content_type={} or guess_type(filepath)[0],
-            )
-            """.format(
-                    send, filepath, content_filename, content_type
-                )
-            )
-            await asgi_send_file(
-                send,
-                filepath,
-                filename=content_filename,
-                content_type=content_type or guess_type(filepath)[0],
+                status=status_code,
             )
